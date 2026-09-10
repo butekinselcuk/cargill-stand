@@ -79,7 +79,7 @@ async function idbDel(store, key) {
 /* ------------------------------- Durum ---------------------------------- */
 const DEFAULTS = {
   clockSec: 15, fadeMs: 400, videoFit: 'cover', clockFit: 'contain',
-  order: 'seq', audio: false, secHand: true, beam: true, smooth: true
+  order: 'seq', audio: false, secHand: true, beam: false, smooth: true
 };
 const state = { items: [], cfg: Object.assign({}, DEFAULTS) };
 

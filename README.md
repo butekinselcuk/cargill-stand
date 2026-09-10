@@ -31,7 +31,7 @@ Kapatmak: `ALT+F4` · Ayar ekranına dönmek: `ESC`
 | **Sıra** | Videolar sırayla veya karışık oynatılır |
 | **Video sesi açık** | Kapalıysa videolar sessiz oynar |
 | **Saniye ibresi** | Tasarımdaki açık yeşil ince ibre. Kapatılırsa hem ibre hem de ona bağlı ışık huzmesi kalkar |
-| **Işık huzmesi ibreleri takip etsin** | Açıkken kadrandaki aydınlık dilim yelkovan ve saniye ibresinin arkasından süzülür (orijinal tasarımdaki efektin canlısı). Kapatılırsa kadran düz kalır |
+| **Işık huzmesi ibreleri takip etsin** | **Varsayılan: kapalı.** Açılırsa kadrandaki aydınlık dilim yelkovan ve saniye ibresinin arkasından süzülür (orijinal tasarımdaki efektin canlısı) |
 | **Akıcı ibre hareketi** | Açık: ibreler kaymadan akar. Kapalı: saniyede bir tık atar |
 
 Ayarlar ve video listesi bilgisayarda saklanır — program kapanıp açılsa da korunur.
