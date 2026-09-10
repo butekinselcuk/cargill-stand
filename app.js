@@ -77,6 +77,7 @@ async function idbDel(store, key) {
 }
 
 /* ------------------------------- Durum ---------------------------------- */
+const CFG_VER = 2;          // varsayilan degisince artir: eski kayitli ayar ezilir
 const DEFAULTS = {
   clockSec: 15, fadeMs: 400, videoFit: 'cover', clockFit: 'contain',
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true
@@ -244,7 +245,12 @@ async function clearAll() {
 
 async function restore() {
   const cfg = await idbGet('meta', 'cfg');
-  if (cfg) CFG_KEYS.forEach(k => { if (cfg[k] !== undefined) state.cfg[k] = cfg[k]; });
+  if (cfg) {
+    CFG_KEYS.forEach(k => { if (cfg[k] !== undefined) state.cfg[k] = cfg[k]; });
+    // Daha once kaydedilmis ayarlar eski surumdense, degisen varsayilanlar geri gelsin
+    if (cfg.ver !== CFG_VER) state.cfg.beam = DEFAULTS.beam;
+  }
+  state.cfg.ver = CFG_VER;
   writeForm(); applyClockOptions();
   const order = (await idbGet('meta', 'order')) || [];
   const files = await idbAll('files');
