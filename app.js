@@ -15,48 +15,64 @@ const DB_NAME = 'cargill-show', DB_VER = 1;
 let dbp = null;
 function db() {
   if (dbp) return dbp;
-  dbp = new Promise((res, rej) => {
-    const r = indexedDB.open(DB_NAME, DB_VER);
-    r.onupgradeneeded = () => {
-      const d = r.result;
-      if (!d.objectStoreNames.contains('files')) d.createObjectStore('files', { keyPath: 'id' });
-      if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
-    };
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
-  }).catch(e => { console.warn('IndexedDB kullanilamiyor:', e); return null; });
+  dbp = new Promise(res => {
+    let done = false;
+    const finish = v => { if (!done) { done = true; if (!v) console.warn('IndexedDB kullanilamiyor - ayarlar kalici saklanmayacak'); res(v); } };
+    // Sayfa dosyadan acildiginda (file://) IndexedDB hic yanit vermeyebilir;
+    // uygulama bu yuzden kilitlenmesin diye kisa bir zaman asimi koyuyoruz.
+    setTimeout(() => finish(null), 1500);
+    try {
+      const r = indexedDB.open(DB_NAME, DB_VER);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        if (!d.objectStoreNames.contains('files')) d.createObjectStore('files', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta');
+      };
+      r.onsuccess = () => finish(r.result);
+      r.onerror = () => finish(null);
+      r.onblocked = () => finish(null);
+    } catch (e) { finish(null); }
+  });
   return dbp;
 }
 async function idbPut(store, val, key) {
   const d = await db(); if (!d) return;
   return new Promise((res, rej) => {
-    const tx = d.transaction(store, 'readwrite');
-    tx.objectStore(store).put(val, key);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    try {
+      const tx = d.transaction(store, 'readwrite');
+      tx.objectStore(store).put(val, key);
+      tx.oncomplete = res; tx.onerror = () => res();
+    } catch (e) { res(); }
   });
 }
 async function idbGet(store, key) {
   const d = await db(); if (!d) return undefined;
   return new Promise((res, rej) => {
-    const tx = d.transaction(store, 'readonly');
-    const rq = tx.objectStore(store).get(key);
-    rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
+    try {
+      const tx = d.transaction(store, 'readonly');
+      const rq = tx.objectStore(store).get(key);
+      rq.onsuccess = () => res(rq.result); rq.onerror = () => res(undefined);
+    } catch (e) { res(undefined); }
   });
 }
 async function idbAll(store) {
   const d = await db(); if (!d) return [];
   return new Promise((res, rej) => {
-    const tx = d.transaction(store, 'readonly');
-    const rq = tx.objectStore(store).getAll();
-    rq.onsuccess = () => res(rq.result || []); rq.onerror = () => rej(rq.error);
+    try {
+      const tx = d.transaction(store, 'readonly');
+      const rq = tx.objectStore(store).getAll();
+      rq.onsuccess = () => res(rq.result || []); rq.onerror = () => res([]);
+    } catch (e) { res([]); }
   });
 }
 async function idbDel(store, key) {
   const d = await db(); if (!d) return;
   return new Promise((res, rej) => {
-    const tx = d.transaction(store, 'readwrite');
-    tx.objectStore(store).delete(key);
-    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+    try {
+      const tx = d.transaction(store, 'readwrite');
+      tx.objectStore(store).delete(key);
+      tx.oncomplete = res; tx.onerror = () => res();
+    } catch (e) { res(); }
   });
 }
 
@@ -494,7 +510,7 @@ function setupPreview() {
 
 /* ------------------------------- Baslangic ------------------------------- */
 (async function init() {
-  await restore();
+  try { await restore(); } catch (e) { console.warn('geri yukleme atlandi', e); renderList(); }
   setupPreview();
   tickClock();
   els.wakeNote.innerHTML = (location.protocol === 'http:' || location.protocol === 'https:')
