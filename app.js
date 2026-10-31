@@ -77,10 +77,12 @@ async function idbDel(store, key) {
 }
 
 /* ------------------------------- Durum ---------------------------------- */
-const CFG_VER = 2;          // varsayilan degisince artir: eski kayitli ayar ezilir
+const CFG_VER = 3;          // varsayilan degisince artir: eski kayitli ayar ezilir
 const DEFAULTS = {
-  clockSec: 15, fadeMs: 400, videoFit: 'cover', clockFit: 'contain',
-  order: 'seq', audio: false, secHand: true, beam: false, smooth: true
+  clockSec: 5, fadeMs: 400, videoFit: 'contain', clockFit: 'contain',
+  order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
+  // LED alani: stanttaki LED 768x1536 (dikey); LED islemcisi ekranin sol ustunden okur
+  screenMode: 'tam', ledW: 768, ledH: 1536, ledX: 0, ledY: 0
 };
 const state = { items: [], cfg: Object.assign({}, DEFAULTS) };
 
@@ -99,11 +101,13 @@ const els = {
   vidA: $('#vidA'), vidB: $('#vidB'), tapStart: $('#tapStart'), toast: $('#toast'),
   wakeNote: $('#wakeNote')
 };
-const CFG_KEYS = ['clockSec', 'fadeMs', 'videoFit', 'clockFit', 'order', 'audio', 'secHand', 'beam', 'smooth'];
+const CFG_KEYS = ['clockSec', 'fadeMs', 'videoFit', 'clockFit', 'order', 'audio', 'secHand', 'beam', 'smooth',
+  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY'];
+const tamSayi = (v, d, en) => { const n = Math.round(+v); return Number.isFinite(n) && n >= en ? n : d; };
 
 function readForm() {
   const c = state.cfg;
-  c.clockSec = Math.max(1, +$('#clockSec').value || 15);
+  c.clockSec = Math.max(1, +$('#clockSec').value || 5);
   c.fadeMs = Math.max(0, +$('#fadeMs').value || 0);
   c.videoFit = $('#videoFit').value;
   c.clockFit = $('#clockFit').value;
@@ -112,7 +116,13 @@ function readForm() {
   c.secHand = $('#secHand').checked;
   c.beam = $('#beam').checked;
   c.smooth = $('#smooth').checked;
+  c.screenMode = $('#screenMode').value;
+  c.ledW = tamSayi($('#ledW').value, DEFAULTS.ledW, 16);
+  c.ledH = tamSayi($('#ledH').value, DEFAULTS.ledH, 16);
+  c.ledX = tamSayi($('#ledX').value, 0, 0);
+  c.ledY = tamSayi($('#ledY').value, 0, 0);
   idbPut('meta', Object.assign({}, c), 'cfg');
+  showLedFields();
   applyClockOptions();
 }
 function writeForm() {
@@ -122,6 +132,43 @@ function writeForm() {
   $('#order').value = c.order; $('#audio').checked = c.audio;
   $('#secHand').checked = c.secHand; $('#beam').checked = c.beam;
   $('#smooth').checked = c.smooth;
+  $('#screenMode').value = c.screenMode;
+  $('#ledW').value = c.ledW; $('#ledH').value = c.ledH;
+  $('#ledX').value = c.ledX; $('#ledY').value = c.ledY;
+  showLedFields();
+}
+
+/* ------------------------------ LED alani --------------------------------
+   Video ve saat, ekranin LED'e giden bolgesine BIREBIR piksel yerlesir:
+   CSS pikseli = cihaz pikseli / devicePixelRatio; Windows olceklendirmesi
+   (%125, %150) olsa da goruntu yeniden orneklenmez, bulaniklasmaz.        */
+function showLedFields() {
+  const led = $('#screenMode').value === 'led';
+  $('#ledBox').hidden = !led;
+  $('#videoFitField').hidden = led;
+  const info = $('#ledInfo');
+  if (!led || !info) return;
+  const dpr = window.devicePixelRatio || 1;
+  const sw = Math.round(screen.width * dpr), sh = Math.round(screen.height * dpr);
+  const c = state.cfg;
+  const sigar = c.ledX + c.ledW <= sw && c.ledY + c.ledH <= sh;
+  const alan = c.ledW + '×' + c.ledH;
+  info.classList.toggle('warn', !sigar);
+  info.textContent = 'Bu bilgisayarın ekranı ' + sw + '×' + sh + ' piksel. ' + (sigar
+    ? 'LED alanı ' + alan + ' sığıyor; video ve saat ölçeklenmeden yerleşir.'
+    : 'LED alanı ' + alan + ' bu ekrana sığmıyor: taşan kısım görünmez. Stanttaki bilgisayarın çıkış çözünürlüğü en az bu kadar olmalı (LED işlemcisinin beklediği ayar).');
+}
+function layoutPlayer() {
+  const led = state.cfg.screenMode === 'led';
+  els.player.classList.toggle('mode-led', led);
+  els.player.classList.toggle('fit-contain', !led && state.cfg.videoFit === 'contain');
+  const dpr = window.devicePixelRatio || 1, c = state.cfg;
+  [els.layerVideo, els.layerClock].forEach(l => {
+    if (!led) { l.style.left = l.style.top = l.style.width = l.style.height = ''; return; }
+    l.style.left = (c.ledX / dpr) + 'px'; l.style.top = (c.ledY / dpr) + 'px';
+    l.style.width = (c.ledW / dpr) + 'px'; l.style.height = (c.ledH / dpr) + 'px';
+  });
+  layoutStage();
 }
 
 /* ------------------------------ Saat cizimi ------------------------------ */
@@ -173,6 +220,28 @@ function layoutStage() {
   if (cover ? (h < H) : (h > H)) { h = H; w = H * AR; }
   els.stage.style.width = w + 'px';
   els.stage.style.height = h + 'px';
+  zeminDoldur(host, W, H, w, h);
+}
+
+/* Saat ekrani videoyla ayni olcude (orn. LED 768x1536) TAM dolu olsun: poster
+   7:10 oldugu icin kalan ust/alt (ya da sol/sag) bosluk, posterin o kenarindaki
+   renklerle sutun sutun uzatilir — birlesme cizgisi gorunmez, icerik kesilmez. */
+function zeminDoldur(host, W, H, w, h) {
+  const x = (W - w) / 2, y = (H - h) / 2, px = v => v.toFixed(2) + 'px';
+  const st = host.style;
+  if (h < H - 0.5) {
+    st.backgroundImage = 'url(assets/zemin-ust.png), url(assets/zemin-alt.png)';
+    st.backgroundSize = px(w) + ' ' + px(y) + ', ' + px(w) + ' ' + px(H - y - h);
+    st.backgroundPosition = px(x) + ' 0, ' + px(x) + ' ' + px(y + h);
+  } else if (w < W - 0.5) {
+    st.backgroundImage = 'url(assets/zemin-sol.png), url(assets/zemin-sag.png)';
+    st.backgroundSize = px(x) + ' ' + px(h) + ', ' + px(W - x - w) + ' ' + px(h);
+    st.backgroundPosition = '0 ' + px(y) + ', ' + px(x + w) + ' ' + px(y);
+  } else {
+    st.backgroundImage = 'none';
+    return;
+  }
+  st.backgroundRepeat = 'no-repeat';
 }
 
 /* ---------------------------- Video listesi ------------------------------ */
@@ -248,7 +317,7 @@ async function restore() {
   if (cfg) {
     CFG_KEYS.forEach(k => { if (cfg[k] !== undefined) state.cfg[k] = cfg[k]; });
     // Daha once kaydedilmis ayarlar eski surumdense, degisen varsayilanlar geri gelsin
-    if (cfg.ver !== CFG_VER) state.cfg.beam = DEFAULTS.beam;
+    if (cfg.ver !== CFG_VER) { state.cfg.beam = DEFAULTS.beam; state.cfg.videoFit = DEFAULTS.videoFit; }
   }
   state.cfg.ver = CFG_VER;
   writeForm(); applyClockOptions();
@@ -301,11 +370,10 @@ async function startShow() {
   if (!state.items.length) return;
   els.setup.hidden = true; els.player.hidden = false;
   els.player.style.setProperty('--fade', state.cfg.fadeMs + 'ms');
-  els.player.classList.toggle('fit-contain', state.cfg.videoFit === 'contain');
   els.player.classList.add('hide-cursor');
   try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) { }
   await requestWakeLock();
-  layoutStage(); startClock();
+  layoutPlayer(); startClock();
   player.running = true; player.front = els.vidA; player.back = els.vidB;
   buildQueue();
   playNextVideo();
@@ -319,7 +387,7 @@ async function showClockOnly() {
   els.player.classList.add('hide-cursor');
   try { await document.documentElement.requestFullscreen({ navigationUI: 'hide' }); } catch (e) { }
   await requestWakeLock();
-  layoutStage(); startClock();
+  layoutPlayer(); startClock();
   els.layerVideo.classList.remove('on');
   els.layerClock.classList.add('on');
 }
@@ -465,8 +533,8 @@ function keyHandler(e) {
   }
 }
 document.onkeydown = keyHandler;
-window.addEventListener('resize', () => { layoutStage(); layoutPreview(); });
-document.addEventListener('fullscreenchange', () => { layoutStage(); });
+window.addEventListener('resize', () => { layoutPlayer(); layoutPreview(); showLedFields(); });
+document.addEventListener('fullscreenchange', () => { layoutPlayer(); });
 document.addEventListener('contextmenu', e => { if (player.running) e.preventDefault(); });
 
 els.pickBtn.onclick = e => { e.stopPropagation(); els.fileInput.click(); };

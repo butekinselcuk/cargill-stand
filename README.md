@@ -13,7 +13,7 @@ döner**. Ekranda tarayıcı arayüzü görünmez — her şey video gibi tam ek
    (Node.js kurulu olmalı: <https://nodejs.org> → LTS)
 2. Açılan ekranda videoları sürükleyip bırakın **veya** `media/` klasörüne kopyalayıp
    *"media/ klasörünü tara"* düğmesine basın.
-3. **Saat ekranda kalma süresi**ni saniye cinsinden yazın (örn. 15).
+3. **Saat ekranda kalma süresi**ni saniye cinsinden yazın (örn. 5).
 4. **GÖSTERİYİ BAŞLAT** → tam ekran döngü başlar.
 
 Kapatmak: `ALT+F4` · Ayar ekranına dönmek: `ESC`
@@ -26,8 +26,9 @@ Kapatmak: `ALT+F4` · Ayar ekranına dönmek: `ESC`
 |---|---|
 | **Saat ekranda kalma süresi** | Her videodan sonra saatin kaç saniye görüneceği |
 | **Geçiş yumuşatma** | Video↔saat geçişindeki çapraz geçiş süresi (ms). `0` = sert kesme |
-| **Video ekrana oturma** | `Ekranı doldur` (kenarlardan kırpar) veya `Tamamı görünsün` |
-| **Saat görseli oturma** | Poster dikey (7:10) olduğu için yatay ekranda `Tamamı görünsün` önerilir; kenarlar posterin kendi koyu yeşiliyle (#032A15) dolar, kesme yeri belli olmaz |
+| **Ekran düzeni** | `Tam ekran` (monitör/TV) veya **`LED alanı — birebir piksel`**. LED modunda video ve saat, ekranın LED'e giden bölgesine **hiç ölçeklenmeden** yerleşir; görüntü bulanıklaşmaz, kesilmez. Stanttaki LED videosu **768×1536**: varsayılan alan 768×1536, sol üst köşe (X=0, Y=0). Kurulum ekranı, alan bu bilgisayarın ekranına sığmıyorsa uyarır |
+| **Video ekrana oturma** | Yalnız tam ekran modunda: `Tamamı görünsün` (varsayılan, hiçbir yer kesilmez) veya `Ekranı doldur` (kenarlardan kırpar — dikey videoyu yatay ekranda büyütüp keser, önerilmez) |
+| **Saat görseli oturma** | `Tamamı görünsün` (önerilen): saat, yazılar ve ikonlar kesilmez. Poster 7:10 olduğu için kalan boşluk (LED 768×1536'da üstte/altta ~220 px) **posterin kendi kenar renkleriyle sütun sütun uzatılır** (`assets/zemin-*.png`) — saat ekranı videoyla aynı ölçüde tam dolu görünür, birleşme çizgisi olmaz |
 | **Sıra** | Videolar sırayla veya karışık oynatılır |
 | **Video sesi açık** | Kapalıysa videolar sessiz oynar |
 | **Saniye ibresi** | Tasarımdaki açık yeşil ince ibre. Kapatılırsa hem ibre hem de ona bağlı ışık huzmesi kalkar |
@@ -46,6 +47,10 @@ Ayarlar ve video listesi bilgisayarda saklanır — program kapanıp açılsa da
 - **Otomatik başlatma:** `BASLAT.bat` kısayolunu `shell:startup` klasörüne koyarsanız
   bilgisayar açıldığında gösteri kendiliğinden hazır gelir. Videolar `media/` klasöründe
   duruyorsa liste otomatik yüklenir; tek yapılacak **GÖSTERİYİ BAŞLAT**'a basmaktır.
+- **LED bağlantısı:** LED işlemcisi bilgisayar görüntüsünün bir bölgesini okur. 768×1536'lık
+  video için bilgisayarın ekranı en az 1536 piksel yüksekliğinde olmalı (örn. Windows'ta
+  ekranı **dikey 1080×1920** yapmak; kurulum ekibi LED işlemcisine göre ayarlar). Ayarlarda
+  **Ekran düzeni → LED alanı** seçin; işlemcinin okuduğu bölge sol üst köşe değilse X/Y girin.
 - **Video formatı:** En stabil sonuç için **MP4 (H.264 + AAC)**. 4K yerine ekran
   çözünürlüğünde (örn. 1920×1080) verilmiş dosyalar takılma riskini sıfırlar.
 - **Ses:** Videoda ses varsa ve "Video sesi açık" işaretliyse ilk oynatma

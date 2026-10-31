@@ -14,6 +14,9 @@ echo   CARGILL STAND GOSTERISI
 echo   ------------------------------------
 echo   Sunucu baslatiliyor...
 
+rem --- once paketin icindeki Node.js (kurulum gerekmez), yoksa bilgisayardaki ---
+set "NODE=node"
+if exist "%~dp0node\node.exe" (set "NODE=%~dp0node\node.exe" & goto nodeok)
 where node >nul 2>nul
 if not errorlevel 1 goto nodeok
 echo.
@@ -26,7 +29,7 @@ exit /b 1
 
 rem --- sunucuyu ayri pencerede baslat ---
 del /q "%~dp0.server.pid" >nul 2>nul
-start "CargillShowServer" /min cmd /c "title CargillShowServer&node "%~dp0server.js" %PORT%"
+start "CargillShowServer" /min cmd /c "title CargillShowServer&"%NODE%" "%~dp0server.js" %PORT%"
 
 rem --- sunucu ayaga kalkana kadar bekle (en fazla 20 sn) ---
 set /a tries=0

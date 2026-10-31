@@ -42,7 +42,7 @@
         <label class="field">
           <span class="lbl">Saat ekranda kalma süresi</span>
           <span class="inp-wrap">
-            <input type="number" id="clockSec" min="1" max="3600" step="1" value="15">
+            <input type="number" id="clockSec" min="1" max="3600" step="1" value="5">
             <em>saniye</em>
           </span>
         </label>
@@ -56,10 +56,28 @@
         </label>
 
         <label class="field">
+          <span class="lbl">Ekran düzeni</span>
+          <select id="screenMode">
+            <option value="tam">Tam ekran (monitör / TV)</option>
+            <option value="led">LED alanı — birebir piksel, ölçekleme yok</option>
+          </select>
+        </label>
+
+        <div class="ledbox" id="ledBox" hidden>
+          <div class="ledgrid">
+            <label><span>Genişlik</span><input type="number" id="ledW" min="16" max="16384" step="1" value="768"></label>
+            <label><span>Yükseklik</span><input type="number" id="ledH" min="16" max="16384" step="1" value="1536"></label>
+            <label><span>Sol (X)</span><input type="number" id="ledX" min="0" max="16384" step="1" value="0"></label>
+            <label><span>Üst (Y)</span><input type="number" id="ledY" min="0" max="16384" step="1" value="0"></label>
+          </div>
+          <div class="ledinfo" id="ledInfo" aria-live="polite"></div>
+        </div>
+
+        <label class="field" id="videoFitField">
           <span class="lbl">Video ekrana oturma</span>
           <select id="videoFit">
-            <option value="cover">Ekranı doldur (kenarlardan kırp)</option>
             <option value="contain">Tamamı görünsün (kenarda boşluk)</option>
+            <option value="cover">Ekranı doldur (kenarlardan kırp)</option>
           </select>
         </label>
 
