@@ -28,7 +28,7 @@ Kapatmak: `ALT+F4` · Ayar ekranına dönmek: `ESC`
 | **Geçiş yumuşatma** | Video↔saat geçişindeki çapraz geçiş süresi (ms). `0` = sert kesme |
 | **Ekran düzeni** | `Tam ekran` (monitör/TV) veya **`LED alanı — birebir piksel`**. LED modunda video ve saat, ekranın LED'e giden bölgesine **hiç ölçeklenmeden** yerleşir; görüntü bulanıklaşmaz, kesilmez. Stanttaki LED videosu **768×1536**: varsayılan alan 768×1536, sol üst köşe (X=0, Y=0). Kurulum ekranı, alan bu bilgisayarın ekranına sığmıyorsa uyarır |
 | **Video ekrana oturma** | Yalnız tam ekran modunda: `Tamamı görünsün` (varsayılan, hiçbir yer kesilmez) veya `Ekranı doldur` (kenarlardan kırpar — dikey videoyu yatay ekranda büyütüp keser, önerilmez) |
-| **Saat görseli oturma** | `Tamamı görünsün` (önerilen): saat, yazılar ve ikonlar kesilmez. Poster 7:10 olduğu için kalan boşluk (LED 768×1536'da üstte/altta ~220 px) **posterin kendi kenar renkleriyle sütun sütun uzatılır** (`assets/zemin-*.png`) — saat ekranı videoyla aynı ölçüde tam dolu görünür, birleşme çizgisi olmaz |
+| **Saat görseli oturma** | Saat her zaman **videonun ekranda kapladığı çerçeveye** oturur; saat ile video her ekranda aynı boydadır. `Tamamı görünsün` (önerilen): saat, yazılar ve ikonlar kesilmez. `Ekranı doldur`: çerçeveyi doldurur, yanlardan kırpar. Poster 7:10 olduğu için kalan boşluk (LED 768×1536'da üstte/altta ~220 px) **posterin kendi kenar renkleriyle sütun sütun uzatılır** (`assets/zemin-*.png`) — saat ekranı videoyla aynı ölçüde tam dolu görünür, birleşme çizgisi olmaz |
 | **Sıra** | Videolar sırayla veya karışık oynatılır |
 | **Video sesi açık** | Kapalıysa videolar sessiz oynar |
 | **Saniye ibresi** | Tasarımdaki açık yeşil ince ibre. Kapatılırsa hem ibre hem de ona bağlı ışık huzmesi kalkar |

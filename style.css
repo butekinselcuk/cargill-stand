@@ -108,6 +108,10 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--stroke);border-radiu
 .player.mode-led .layer{inset:auto}
 .player.mode-led .vid{object-fit:contain}
 .stage{position:relative;overflow:hidden;isolation:isolate}
+/* saat cercevesi: videonun ekranda kapladigi alanin aynisi (konum/boyut JS). Disi, videonun
+   kenar bosluklari gibi siyah kalir; saat ile video her ekranda ayni boyda gorunur. */
+#layerClock{background:#000}
+.cerceve{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden;background:var(--bg)}
 .stage .poster{position:absolute;inset:0;width:100%;height:100%;display:block}
 .stage .hands{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 

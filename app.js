@@ -82,7 +82,8 @@ const DEFAULTS = {
   clockSec: 5, fadeMs: 400, videoFit: 'contain', clockFit: 'contain',
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
   // LED alani: stanttaki LED 768x1536 (dikey); LED islemcisi ekranin sol ustunden okur
-  screenMode: 'tam', ledW: 768, ledH: 1536, ledX: 0, ledY: 0
+  screenMode: 'tam', ledW: 768, ledH: 1536, ledX: 0, ledY: 0,
+  sonVideo: null            // son oynayan videonun boyutu: saat cercevesi videoyla ayni olsun
 };
 const state = { items: [], cfg: Object.assign({}, DEFAULTS) };
 
@@ -99,10 +100,10 @@ const els = {
   beams: $('#beams'), beamMin: $('#beamMin'), beamSec: $('#beamSec'),
   layerVideo: $('#layerVideo'), layerClock: $('#layerClock'),
   vidA: $('#vidA'), vidB: $('#vidB'), tapStart: $('#tapStart'), toast: $('#toast'),
-  wakeNote: $('#wakeNote')
+  wakeNote: $('#wakeNote'), cerceve: $('#cerceve')
 };
 const CFG_KEYS = ['clockSec', 'fadeMs', 'videoFit', 'clockFit', 'order', 'audio', 'secHand', 'beam', 'smooth',
-  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY'];
+  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY', 'sonVideo'];
 const tamSayi = (v, d, en) => { const n = Math.round(+v); return Number.isFinite(n) && n >= en ? n : d; };
 
 function readForm() {
@@ -209,18 +210,41 @@ let rafId = 0;
 function clockLoop() { tickClock(); rafId = requestAnimationFrame(clockLoop); }
 function startClock() { if (!rafId) clockLoop(); }
 
-/* Sahneyi (poster + ibreler) ekrana gore boyutlandir */
+/* Sahneyi (poster + ibreler) boyutlandir. Saat, videonun ekranda kapladigi
+   cerceveye oturur: ekran orani ne olursa olsun saat ile video ayni boyda.
+   Cerceve icinde: 'Tamami gorunsun' hicbir yeri kesmez, bosluk posterin kenar
+   renkleriyle dolar; 'Ekrani doldur' cerceveyi doldurur (yanlardan kirpar).   */
 const AR = POSTER_W / POSTER_H;
+function videoCercevesi(W, H) {
+  const v = state.cfg.sonVideo;
+  if (!v || !v[0] || !v[1]) return { x: 0, y: 0, w: W, h: H };
+  const cover = state.cfg.screenMode !== 'led' && state.cfg.videoFit === 'cover';
+  const k = cover ? Math.max(W / v[0], H / v[1]) : Math.min(W / v[0], H / v[1]);
+  const w = Math.min(W, v[0] * k), h = Math.min(H, v[1] * k);
+  return { x: (W - w) / 2, y: (H - h) / 2, w: w, h: h };
+}
 function layoutStage() {
-  const host = els.stage.parentElement;
-  const W = host.clientWidth, H = host.clientHeight;
-  if (!W || !H) return;
+  const host = els.layerClock;
+  const LW = host.clientWidth, LH = host.clientHeight;
+  if (!LW || !LH) return;
+  const c = videoCercevesi(LW, LH), f = els.cerceve.style;
+  f.left = c.x + 'px'; f.top = c.y + 'px'; f.width = c.w + 'px'; f.height = c.h + 'px';
+  f.right = f.bottom = 'auto';
+  const W = c.w, H = c.h;
   const cover = state.cfg.clockFit === 'cover';
   let w = W, h = W / AR;
   if (cover ? (h < H) : (h > H)) { h = H; w = H * AR; }
   els.stage.style.width = w + 'px';
   els.stage.style.height = h + 'px';
-  zeminDoldur(host, W, H, w, h);
+  zeminDoldur(els.cerceve, W, H, w, h);
+}
+function videoBoyutuOgren(v) {
+  if (!v.videoWidth || !v.videoHeight) return;
+  const s = state.cfg.sonVideo;
+  if (s && s[0] === v.videoWidth && s[1] === v.videoHeight) return;
+  state.cfg.sonVideo = [v.videoWidth, v.videoHeight];
+  idbPut('meta', Object.assign({}, state.cfg), 'cfg');      // "sadece saat" modu da ayni cerceveyi bilsin
+  layoutStage();
 }
 
 /* Saat ekrani videoyla ayni olcude (orn. LED 768x1536) TAM dolu olsun: poster
@@ -586,6 +610,7 @@ function setupPreview() {
 (async function init() {
   try { await restore(); } catch (e) { console.warn('geri yukleme atlandi', e); renderList(); }
   setupPreview();
+  [els.vidA, els.vidB].forEach(v => v.addEventListener('loadedmetadata', () => videoBoyutuOgren(v)));
   tickClock();
   els.wakeNote.innerHTML = (location.protocol === 'http:' || location.protocol === 'https:')
     ? 'Ayarlar ve videolar bu bilgisayarda saklanır; program yeniden açıldığında liste korunur. Gösteri sırasında ekran uykuya geçmez.'
