@@ -118,6 +118,10 @@ kbd{background:rgba(255,255,255,.12);border:1px solid var(--stroke);border-radiu
 .desen svg{display:block;width:100%;height:100%}
 .player.mode-led .desen{inset:auto}
 .ledgrid .tam-satir{grid-column:1/-1}
+/* Resolume modu: 1536x1536 alan ekrana gerilir; video alani doldurur (oran Resolume'da geri gelir) */
+.player.mode-res .vid{object-fit:fill}
+.vid-kopya{position:absolute;left:768px;top:0;width:768px;height:1536px}
+.vid-kopya[hidden]{display:none}
 .stage{position:relative;overflow:hidden;isolation:isolate}
 /* saat cercevesi: videonun ekranda kapladigi alanin aynisi (konum/boyut JS). Disi, videonun
    kenar bosluklari gibi siyah kalir; saat ile video her ekranda ayni boyda gorunur. */

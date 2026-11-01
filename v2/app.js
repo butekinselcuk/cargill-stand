@@ -77,14 +77,16 @@ async function idbDel(store, key) {
 }
 
 /* ------------------------------- Durum ---------------------------------- */
-const CFG_VER = 4;          // varsayilan degisince artir: eski kayitli ayar ezilir
+const CFG_VER = 5;          // varsayilan degisince artir: eski kayitli ayar ezilir
 const DEFAULTS = {
   clockSec: 5, fadeMs: 400, videoFit: 'contain', clockFit: 'contain',
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
   // LED alani: stanttaki LED 768x1536 (dikey); LED islemcisi ekranin sol ustunden okur
   // v2: LED yuzu (768x1536) yan yatik 1536x768 cizilir -> 1920x1080 yakalamaya olceklemeden
   // sigar; Resolume 90 derece dondurup yuzlere esler. Video ve saat birebir piksel.
-  screenMode: 'yatik', ledW: 768, ledH: 1536, ledX: 0, ledY: 0, yon: 'cw', desen: false,
+  // 'resolume': stanttaki Resolume, 1920x1080 yakalamanin TAMAMINI 1536x1536'ya (iki yuz) sigdiriyor.
+  // Bu modda 1536x1536 alan ekrana o sikistirmanin tersiyle cizilir -> LED'de oranlar dogru, bosluk yok.
+  screenMode: 'resolume', saatZoom: 112, ledW: 768, ledH: 1536, ledX: 0, ledY: 0, yon: 'cw', desen: false,
   // 'oto': video iki ekranlik (1536x1536, kareye yakin) ise iki saat, tek ekranlik (768x1536) ise tek saat
   saatAdet: 'oto',
   sonVideo: null           // son oynayan videonun boyutu: saat cercevesi videoyla ayni olsun
@@ -104,10 +106,11 @@ const els = {
   beams: $('#beams'), beamMin: $('#beamMin'), beamSec: $('#beamSec'),
   layerVideo: $('#layerVideo'), layerClock: $('#layerClock'),
   vidA: $('#vidA'), vidB: $('#vidB'), tapStart: $('#tapStart'), toast: $('#toast'),
-  wakeNote: $('#wakeNote'), cerceve: $('#cerceve'), desen: $('#desenKatman')
+  wakeNote: $('#wakeNote'), cerceve: $('#cerceve'), desen: $('#desenKatman'),
+  kopya: $('#vidKopya'), kopyaCtx: $('#vidKopya').getContext('2d')
 };
 const CFG_KEYS = ['clockSec', 'fadeMs', 'videoFit', 'clockFit', 'order', 'audio', 'secHand', 'beam', 'smooth',
-  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY', 'yon', 'desen', 'saatAdet', 'sonVideo'];
+  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY', 'yon', 'desen', 'saatAdet', 'saatZoom', 'sonVideo'];
 // ikinci saat: ayni sahnenin kopyasi (id'ler 'b_' onekiyle), init'te kurulur
 const els2 = {};
 const saatler = () => els2.cerceve ? [els, els2] : [els];
@@ -132,6 +135,7 @@ function readForm() {
   const sa = $('#saatAdet').value; c.saatAdet = sa === '1' ? 1 : sa === '2' ? 2 : 'oto';
   c.yon = $('#yon').value === 'ccw' ? 'ccw' : 'cw';
   c.desen = $('#desen').checked;
+  c.saatZoom = Math.min(115, Math.max(100, tamSayi($('#saatZoom').value, DEFAULTS.saatZoom, 100)));
   idbPut('meta', Object.assign({}, c), 'cfg');
   showLedFields();
   applyClockOptions();
@@ -147,7 +151,7 @@ function writeForm() {
   $('#ledW').value = c.ledW; $('#ledH').value = c.ledH;
   $('#ledX').value = c.ledX; $('#ledY').value = c.ledY;
   $('#saatAdet').value = String(c.saatAdet);
-  $('#yon').value = c.yon; $('#desen').checked = c.desen;
+  $('#yon').value = c.yon; $('#desen').checked = c.desen; $('#saatZoom').value = c.saatZoom;
   showLedFields();
 }
 
@@ -156,11 +160,12 @@ function writeForm() {
    CSS pikseli = cihaz pikseli / devicePixelRatio; Windows olceklendirmesi
    (%125, %150) olsa da goruntu yeniden orneklenmez, bulaniklasmaz.        */
 function showLedFields() {
-  const mod = $('#screenMode').value, yatik = mod === 'yatik', led = mod === 'led' || yatik;
+  const mod = $('#screenMode').value, yatik = mod === 'yatik', led = mod === 'led' || yatik, res = mod === 'resolume';
   $('#ledBox').hidden = !led;
-  $('#videoFitField').hidden = led;
+  $('#resInfo').hidden = !res;
+  $('#videoFitField').hidden = led || res;
   $('#yonField').hidden = !yatik;
-  $('#saatAdetField').hidden = yatik;           // yan yatik modda tek yuz = tek saat
+  $('#saatAdetField').hidden = yatik || res;    // yan yatik: tek yuz = tek saat; resolume: her yuze bir saat
   $('#ledWLbl').textContent = yatik ? 'Yüz genişliği' : 'Genişlik';
   $('#ledHLbl').textContent = yatik ? 'Yüz yüksekliği' : 'Yükseklik';
   const info = $('#ledInfo');
@@ -180,13 +185,22 @@ function showLedFields() {
     : 'Alan ' + alan + yer + ' bu ekrana sığmıyor: taşan kısım görünmez. Bilgisayarın çıkış çözünürlüğü en az bu kadar olmalı.');
   if (sigar && Math.abs(dpr - 1) > 0.01) info.textContent += ' Not: Windows ölçeği %' + Math.round(dpr * 100) + '; %100 önerilir.';
 }
+const RES = 1536;   // iki LED yuzu: 1536x1536 (her yuz 768x1536)
 function layoutPlayer() {
   const c = state.cfg, yatik = c.screenMode === 'yatik', led = c.screenMode === 'led' || yatik;
-  els.player.classList.toggle('mode-led', led);
-  els.player.classList.toggle('fit-contain', !led && c.videoFit === 'contain');
+  const res = c.screenMode === 'resolume';
+  els.player.classList.toggle('mode-led', led || res);
+  els.player.classList.toggle('mode-res', res);
+  els.player.classList.toggle('fit-contain', !led && !res && c.videoFit === 'contain');
   const dpr = window.devicePixelRatio || 1, W = c.ledW / dpr, H = c.ledH / dpr;
   [els.layerVideo, els.layerClock, els.desen].forEach(l => {
     const s = l.style;
+    if (res) {
+      // 1536x1536 alan ekranin tamamina gerilir; Resolume 1920x1080 -> 1536x1536 yaparken geri duzelir
+      s.left = s.top = '0px'; s.width = s.height = RES + 'px'; s.transformOrigin = '0 0';
+      s.transform = 'scale(' + (window.innerWidth / RES) + ',' + (window.innerHeight / RES) + ')';
+      return;
+    }
     if (!led) { s.left = s.top = s.width = s.height = s.transform = s.transformOrigin = ''; return; }
     s.left = (c.ledX / dpr) + 'px'; s.top = (c.ledY / dpr) + 'px';
     s.width = W + 'px'; s.height = H + 'px';
@@ -196,18 +210,47 @@ function layoutPlayer() {
       ? 'translateY(' + W + 'px) rotate(-90deg)'
       : 'translateX(' + H + 'px) rotate(90deg)';
   });
+  videoYerlesim();
   desenCiz();
   layoutStage();
+}
+
+/* Resolume modunda video: 1536x1536 (iki yuzluk) video alani doldurur; 768x1536 (tek yuzluk)
+   video her iki yuzde oynar (sag yuz, calan videonun kare kare kopyasi).                      */
+function tekYuzVideo() {
+  const v = state.cfg.sonVideo;
+  return !!(v && v[0] && v[1] && v[0] / v[1] < 0.75);
+}
+function videoYerlesim() {
+  const res = state.cfg.screenMode === 'resolume', tek = res && tekYuzVideo();
+  [els.vidA, els.vidB].forEach(v => {
+    const s = v.style;
+    s.left = s.width = '';
+    if (tek) { s.left = '0px'; s.width = (RES / 2) + 'px'; }
+  });
+  els.kopya.hidden = !tek;
+  if (tek && !kopyaRaf) kopyaDongu();
+}
+let kopyaRaf = 0;
+function kopyaDongu() {
+  kopyaRaf = 0;
+  if (els.kopya.hidden) return;
+  const v = els.vidA.classList.contains('on') ? els.vidA : els.vidB.classList.contains('on') ? els.vidB : null;
+  if (v && v.readyState >= 2 && !els.player.hidden) {
+    try { els.kopyaCtx.drawImage(v, 0, 0, els.kopya.width, els.kopya.height); } catch (e) { }
+  }
+  kopyaRaf = requestAnimationFrame(kopyaDongu);
 }
 
 /* Hizalama deseni: Resolume'da kesim/dondurme ayarlanirken yuzun kenarlari,
    ust yonu ve piksel olcusu gorunsun. Video ve saatin ustunde durur.      */
 function desenCiz() {
   const c = state.cfg, d = els.desen;
-  const led = c.screenMode === 'led' || c.screenMode === 'yatik';
+  const led = c.screenMode === 'led' || c.screenMode === 'yatik', res = c.screenMode === 'resolume';
   d.hidden = !c.desen;
   if (!c.desen) return;
-  const w = led ? c.ledW : POSTER_W, h = led ? c.ledH : POSTER_H, fs = Math.round(w / 12);
+  const w = res ? RES : led ? c.ledW : POSTER_W, h = res ? RES : led ? c.ledH : POSTER_H;
+  const fs = Math.round((res ? w / 2 : w) / 12);
   let iz = '';
   for (let x = 128; x < w; x += 128) iz += '<line x1="' + x + '" y1="0" x2="' + x + '" y2="' + h + '"/>';
   for (let y = 128; y < h; y += 128) iz += '<line x1="0" y1="' + y + '" x2="' + w + '" y2="' + y + '"/>';
@@ -216,6 +259,10 @@ function desenCiz() {
     '<rect x="2" y="2" width="' + (w - 4) + '" height="' + (h - 4) + '" fill="none" stroke="#FF00D4" stroke-width="4"/>' +
     '<line x1="0" y1="0" x2="' + w + '" y2="' + h + '" stroke="#FF00D4" stroke-width="2"/>' +
     '<line x1="' + w + '" y1="0" x2="0" y2="' + h + '" stroke="#FF00D4" stroke-width="2"/>' +
+    (res ? '<line x1="' + w / 2 + '" y1="0" x2="' + w / 2 + '" y2="' + h + '" stroke="#FFE600" stroke-width="6"/>' +
+      '<g fill="#FFE600" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle" font-size="' + fs + '">' +
+      '<text x="' + w / 4 + '" y="' + h * 0.35 + '">1. YÜZ</text>' +
+      '<text x="' + w * 0.75 + '" y="' + h * 0.35 + '">2. YÜZ</text></g>' : '') +
     '<g fill="#fff" stroke="#000" stroke-width="3" paint-order="stroke" font-family="Arial,sans-serif" font-weight="700" text-anchor="middle" font-size="' + fs + '">' +
     '<text x="' + w / 2 + '" y="' + fs * 1.4 + '">▲ ÜST</text>' +
     '<text x="' + w / 2 + '" y="' + (h - fs * 0.6) + '">ALT</text>' +
@@ -282,12 +329,14 @@ function layoutStage() {
   const LW = host.clientWidth, LH = host.clientHeight;
   if (!LW || !LH) return;
   // yan yatik modda alan tek bir LED yuzudur: tek saat, yuzu doldurur
-  const adet = state.cfg.screenMode === 'yatik' ? 1 : saatSayisi();
+  const mod = state.cfg.screenMode;
+  const adet = mod === 'yatik' ? 1 : mod === 'resolume' ? 2 : saatSayisi();
   saatler().forEach((s, i) => {
     s.cerceve.style.display = i < adet ? '' : 'none';
     if (i >= adet) return;
     // saat ekrani videonun ekranda kapladigi alanin AYNISINI kaplar (Resolume o alani LED'e esler)
-    const f = videoCercevesi(LW, LH);
+    // resolume: alanin tamami iki yuz, her yuze bir saat (video oynamamis olsa da)
+    const f = mod === 'resolume' ? { x: 0, y: 0, w: LW, h: LH } : videoCercevesi(LW, LH);
     if (adet === 1) { saatYerlestir(s, f, 0); return; }
     // iki saat: video alani ikiye bolunur, sol yari 1. LED yuzu, sag yari 2. LED yuzu
     saatYerlestir(s, { x: 0, y: f.y, w: f.w / 2, h: f.h }, f.x + i * f.w / 2);
@@ -309,8 +358,13 @@ function saatYerlestir(s, c, ox) {
   const cover = state.cfg.clockFit === 'cover';
   let w = W, h = W / AR;
   if (cover ? (h < H) : (h > H)) { h = H; w = H * AR; }
-  s.stage.style.width = w + 'px';
-  s.stage.style.height = h + 'px';
+  // buyutme: yanlardaki/ustteki zemin boslugu azalsin (sag alttaki logo %115'e kadar kesilmez)
+  if (!cover) { const z = (state.cfg.saatZoom || 100) / 100; w *= z; h *= z; }
+  // cerceveden buyuk olunca grid ortalamasi sola yasliyor: konumu acikca ortala
+  const st = s.stage.style;
+  st.position = 'absolute'; st.left = ((W - w) / 2) + 'px'; st.top = ((H - h) / 2) + 'px';
+  st.width = w + 'px';
+  st.height = h + 'px';
   zeminDoldur(s.cerceve, W, H, w, h);
 }
 function ikinciSaatKur() {
@@ -326,10 +380,13 @@ function ikinciSaatKur() {
 }
 function videoBoyutuOgren(v) {
   if (!v.videoWidth || !v.videoHeight) return;
+  // arka planda onceden yuklenen siradaki video, oynayaninkini ezmesin
+  if (player.running && v !== player.front) return;
   const s = state.cfg.sonVideo;
   if (s && s[0] === v.videoWidth && s[1] === v.videoHeight) return;
   state.cfg.sonVideo = [v.videoWidth, v.videoHeight];
   idbPut('meta', Object.assign({}, state.cfg), 'cfg');      // "sadece saat" modu da ayni cerceveyi bilsin
+  videoYerlesim();
   layoutStage();
 }
 
@@ -427,7 +484,9 @@ async function restore() {
   if (cfg) {
     CFG_KEYS.forEach(k => { if (cfg[k] !== undefined) state.cfg[k] = cfg[k]; });
     // Daha once kaydedilmis ayarlar eski surumdense, degisen varsayilanlar geri gelsin
-    if (cfg.ver !== CFG_VER) { state.cfg.beam = DEFAULTS.beam; state.cfg.videoFit = DEFAULTS.videoFit; state.cfg.saatAdet = DEFAULTS.saatAdet; }
+    if (cfg.ver !== CFG_VER) {
+      ['beam', 'videoFit', 'saatAdet', 'screenMode', 'saatZoom'].forEach(k => { state.cfg[k] = DEFAULTS[k]; });
+    }
   }
   state.cfg.ver = CFG_VER;
   writeForm(); applyClockOptions();
@@ -516,6 +575,7 @@ function stopShow() {
   if (player.wake) { try { player.wake.release(); } catch (e) { } player.wake = null; }
   if (document.fullscreenElement) document.exitFullscreen().catch(() => { });
   els.player.hidden = true; els.setup.hidden = false;
+  els.kopya.hidden = true;                    // kopya dongusu dursun; baslatinca yeniden kurulur
   els.player.classList.remove('hide-cursor');
   layoutPreview();
 }
@@ -540,6 +600,7 @@ function playNextVideo() {
     els.layerClock.classList.remove('on');
     els.layerVideo.classList.add('on');
     player.back.classList.remove('on'); v.classList.add('on');
+    videoBoyutuOgren(v);                       // yerlesim artik bu videonun olcusune gore
     armWatchdog(v);
     preloadNext();
   };

@@ -58,11 +58,14 @@
         <label class="field">
           <span class="lbl">Ekran düzeni</span>
           <select id="screenMode">
+            <option value="resolume">Resolume 1536×1536 — iki yüz, tüm ekran (önerilen)</option>
             <option value="yatik">LED yüzü yan yatık — birebir piksel (Resolume döndürür)</option>
             <option value="led">LED alanı — birebir piksel, ölçekleme yok</option>
             <option value="tam">Tam ekran (monitör / TV)</option>
           </select>
         </label>
+
+        <div class="ledinfo" id="resInfo" hidden>Stanttaki Resolume, bilgisayar ekranının tamamını (1920×1080) iki LED yüzüne (1536×1536) sığdırıyor. Bu modda görüntü o sığdırmaya göre önceden ayarlanır: LED'de basıklık ve boşluk olmaz. Her yüze bir saat; 768×1536 video iki yüzde birden, 1536×1536 video iki yüze yayılarak oynar.</div>
 
         <div class="ledbox" id="ledBox" hidden>
           <div class="ledgrid">
@@ -94,6 +97,14 @@
             <option value="contain">Tamamı görünsün (önerilen)</option>
             <option value="cover">Ekranı doldur (kenarlardan kırp)</option>
           </select>
+        </label>
+
+        <label class="field">
+          <span class="lbl">Saat büyütme</span>
+          <span class="inp-wrap">
+            <input type="number" id="saatZoom" min="100" max="115" step="1" value="112">
+            <em>% (100–115; yandaki yeşil boşluk azalır)</em>
+          </span>
         </label>
 
         <label class="field" id="saatAdetField">
@@ -146,6 +157,7 @@
   <div class="layer" id="layerVideo">
     <video id="vidA" class="vid" playsinline preload="auto"></video>
     <video id="vidB" class="vid" playsinline preload="auto"></video>
+    <canvas id="vidKopya" class="vid-kopya" width="768" height="1536" hidden></canvas>
   </div>
   <div class="layer" id="layerClock">
     <div class="cerceve" id="cerceve">
