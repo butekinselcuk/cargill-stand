@@ -219,7 +219,7 @@ function startClock() { if (!rafId) clockLoop(); }
 /* Sahneyi (poster + ibreler) boyutlandir. Saat, videonun ekranda kapladigi
    cerceveye oturur: ekran orani ne olursa olsun saat ile video ayni oranda.
    Iki saat secildiyse ekran sol/sag ikiye bolunur (kose LED'in iki yuzu) ve
-   her yarida, o yariya sigan video cercevesinde bir saat durur.
+   her yari bir saatle tamamen dolar.
    Cerceve icinde: 'Tamami gorunsun' hicbir yeri kesmez, bosluk posterin kenar
    renkleriyle dolar; 'Ekrani doldur' cerceveyi doldurur (yanlardan kirpar).   */
 const AR = POSTER_W / POSTER_H;
@@ -238,7 +238,10 @@ function layoutStage() {
   const adet = state.cfg.saatAdet === 1 ? 1 : 2, yW = LW / adet;
   saatler().forEach((s, i) => {
     s.cerceve.style.display = i < adet ? '' : 'none';
-    if (i < adet) saatYerlestir(s, videoCercevesi(yW, LH), i * yW);
+    if (i >= adet) return;
+    // iki saatte her saat kendi yarisini (LED yuzunu) tam doldurur: arada siyah bosluk kalmaz
+    const c = adet === 2 ? { x: 0, y: 0, w: yW, h: LH } : videoCercevesi(yW, LH);
+    saatYerlestir(s, c, i * yW);
   });
 }
 function saatYerlestir(s, c, ox) {
