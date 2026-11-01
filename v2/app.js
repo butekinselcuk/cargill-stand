@@ -77,7 +77,7 @@ async function idbDel(store, key) {
 }
 
 /* ------------------------------- Durum ---------------------------------- */
-const CFG_VER = 3;          // varsayilan degisince artir: eski kayitli ayar ezilir
+const CFG_VER = 4;          // varsayilan degisince artir: eski kayitli ayar ezilir
 const DEFAULTS = {
   clockSec: 5, fadeMs: 400, videoFit: 'contain', clockFit: 'contain',
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
@@ -85,7 +85,8 @@ const DEFAULTS = {
   // v2: LED yuzu (768x1536) yan yatik 1536x768 cizilir -> 1920x1080 yakalamaya olceklemeden
   // sigar; Resolume 90 derece dondurup yuzlere esler. Video ve saat birebir piksel.
   screenMode: 'yatik', ledW: 768, ledH: 1536, ledX: 0, ledY: 0, yon: 'cw', desen: false,
-  saatAdet: 2,            // kose LED: ekran ikiye bolunur, her yuze bir saat
+  // 'oto': video iki ekranlik (1536x1536, kareye yakin) ise iki saat, tek ekranlik (768x1536) ise tek saat
+  saatAdet: 'oto',
   sonVideo: null           // son oynayan videonun boyutu: saat cercevesi videoyla ayni olsun
 };
 const state = { items: [], cfg: Object.assign({}, DEFAULTS) };
@@ -128,7 +129,7 @@ function readForm() {
   c.ledH = tamSayi($('#ledH').value, DEFAULTS.ledH, 16);
   c.ledX = tamSayi($('#ledX').value, 0, 0);
   c.ledY = tamSayi($('#ledY').value, 0, 0);
-  c.saatAdet = $('#saatAdet').value === '1' ? 1 : 2;
+  const sa = $('#saatAdet').value; c.saatAdet = sa === '1' ? 1 : sa === '2' ? 2 : 'oto';
   c.yon = $('#yon').value === 'ccw' ? 'ccw' : 'cw';
   c.desen = $('#desen').checked;
   idbPut('meta', Object.assign({}, c), 'cfg');
@@ -263,8 +264,8 @@ function startClock() { if (!rafId) clockLoop(); }
 
 /* Sahneyi (poster + ibreler) boyutlandir. Saat, videonun ekranda kapladigi
    cerceveye oturur: ekran orani ne olursa olsun saat ile video ayni oranda.
-   Iki saat secildiyse (kose LED'in iki yuzu) video boyunda iki saat ekranin
-   ortasinda yan yana durur; LED alani modunda alanin iki yarisini doldururlar.
+   Iki saat secildiyse (kose LED'in iki yuzu) videonun alani ikiye bolunur:
+   sol yarida bir saat, sag yarida bir saat (her yuze bir saat).
    Cerceve icinde: 'Tamami gorunsun' hicbir yeri kesmez, bosluk posterin kenar
    renkleriyle dolar; 'Ekrani doldur' cerceveyi doldurur (yanlardan kirpar).   */
 const AR = POSTER_W / POSTER_H;
@@ -281,18 +282,24 @@ function layoutStage() {
   const LW = host.clientWidth, LH = host.clientHeight;
   if (!LW || !LH) return;
   // yan yatik modda alan tek bir LED yuzudur: tek saat, yuzu doldurur
-  const adet = state.cfg.screenMode === 'yatik' || state.cfg.saatAdet === 1 ? 1 : 2, yW = LW / adet;
+  const adet = state.cfg.screenMode === 'yatik' ? 1 : saatSayisi();
   saatler().forEach((s, i) => {
     s.cerceve.style.display = i < adet ? '' : 'none';
     if (i >= adet) return;
-    if (adet === 1) { saatYerlestir(s, videoCercevesi(LW, LH), 0); return; }
-    // LED alani = iki yuzun tamami: her yari bir yuz, saat o yariyi doldurur
-    if (state.cfg.screenMode === 'led') { saatYerlestir(s, { x: 0, y: 0, w: yW, h: LH }, i * yW); return; }
-    // Tam ekran: LED ekranin ortasini (videonun durdugu yeri) okur. Iki saat video
-    // boyunda, ortada birbirine yaslanir: kosenin bir yaninda biri, obur yaninda digeri
-    const f = videoCercevesi(yW, LH);
-    saatYerlestir(s, { x: 0, y: f.y, w: f.w, h: f.h }, yW - f.w + i * f.w);
+    // saat ekrani videonun ekranda kapladigi alanin AYNISINI kaplar (Resolume o alani LED'e esler)
+    const f = videoCercevesi(LW, LH);
+    if (adet === 1) { saatYerlestir(s, f, 0); return; }
+    // iki saat: video alani ikiye bolunur, sol yari 1. LED yuzu, sag yari 2. LED yuzu
+    saatYerlestir(s, { x: 0, y: f.y, w: f.w / 2, h: f.h }, f.x + i * f.w / 2);
   });
+}
+// Otomatik: tek LED yuzu 768x1536 (1:2), iki yuz 1536x1536 (1:1). Video genislik/yukseklik
+// orani 0.75'ten buyukse iki ekranlik kabul edilir.
+function saatSayisi() {
+  const a = state.cfg.saatAdet;
+  if (a === 1 || a === 2) return a;
+  const v = state.cfg.sonVideo;
+  return v && v[0] && v[1] && v[0] / v[1] < 0.75 ? 1 : 2;
 }
 function saatYerlestir(s, c, ox) {
   const f = s.cerceve.style;
@@ -420,7 +427,7 @@ async function restore() {
   if (cfg) {
     CFG_KEYS.forEach(k => { if (cfg[k] !== undefined) state.cfg[k] = cfg[k]; });
     // Daha once kaydedilmis ayarlar eski surumdense, degisen varsayilanlar geri gelsin
-    if (cfg.ver !== CFG_VER) { state.cfg.beam = DEFAULTS.beam; state.cfg.videoFit = DEFAULTS.videoFit; }
+    if (cfg.ver !== CFG_VER) { state.cfg.beam = DEFAULTS.beam; state.cfg.videoFit = DEFAULTS.videoFit; state.cfg.saatAdet = DEFAULTS.saatAdet; }
   }
   state.cfg.ver = CFG_VER;
   writeForm(); applyClockOptions();

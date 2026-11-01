@@ -9,6 +9,10 @@ v1 ile aynı gösteri (video → saat döngüsü), farkları:
 - **Hizalama deseni:** Ayarlardan ya da gösteri sırasında **D** tuşuyla açılır. Yüzün kenarları,
   köşegenler, 128 px ızgara ve **ÜST / ALT / SOL / SAĞ** yazıları görünür; Resolume'da kesim ve
   döndürme bununla ayarlanır, sonra desen kapatılır.
+- **Saat ekranı = videonun alanı:** Saat ekranı, videonun ekranda kapladığı alanın **aynısını**
+  kaplar (Resolume o alanı LED'e eşlediği için saat de videoyla aynı yere ve orana oturur).
+  **Saat sayısı → Otomatik (varsayılan):** iki ekranlık video (**1536×1536**) → alan ikiye bölünür,
+  her yüze bir saat (768×1536 + 768×1536); tek ekranlık video (**768×1536**) → tek saat.
 - **Saat zemini:** Cargill Deep Green (#03441F) ile pürüzsüz yeniden üretildi (lekesiz).
 - Ayarlar v1'den ayrı saklanır (aynı bilgisayarda ikisi karışmaz). BASLAT.bat portu **8788**.
 
