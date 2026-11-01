@@ -70,9 +70,11 @@ show/
   style.css         görünüm
   server.js         yerel sunucu (bağımlılık yok)
   BASLAT.bat        sunucu + tam ekran tarayıcı başlatıcı
-  assets/poster.jpg      saat görseli — ibresiz, ışığı düzlenmiş kadran (1728×2468)
+  assets/poster.jpg      saat görseli — ibresiz, ışığı düzlenmiş kadran (1728×2468), kaynak
+  assets/poster-net.jpg  aynısı, yazıları ve logoları silinmiş zemin (ekranda bu kullanılır)
+  assets/fonts/          saat yazılarının vektör fontları (OFL: Cormorant, EB Garamond, Inter)
   assets/beam-mask.png   ışık huzmesinin nereye ne kadar vuracağını taşıyan maske
-  assets/logo.png        Cargill logosu (ibrelerin üstünde kalması için)
+  assets/cargill-logo.png  Cargill logosu (kadran ortası ibrelerin üstünde + sağ alt)
   media/            (isteğe bağlı) videoları buraya da koyabilirsiniz
 ```
 

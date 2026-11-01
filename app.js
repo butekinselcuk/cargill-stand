@@ -649,5 +649,5 @@ function setupPreview() {
   els.wakeNote.innerHTML = (location.protocol === 'http:' || location.protocol === 'https:')
     ? 'Ayarlar ve videolar bu bilgisayarda saklanır; program yeniden açıldığında liste korunur. Gösteri sırasında ekran uykuya geçmez.'
     : '<b>Not:</b> Sayfa doğrudan dosyadan açıldı (file://). Liste kalıcı saklanamaz ve ekran uykusu engellenemez — <b>BASLAT.bat</b> ile açmanız önerilir.';
-  const p = new Image(); p.src = 'assets/poster.jpg';
+  const p = new Image(); p.src = 'assets/poster-net.jpg';
 })();

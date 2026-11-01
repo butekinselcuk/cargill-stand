@@ -1,4 +1,9 @@
 /* ===== Cargill Stand Gösterisi ===== */
+/* Saat ekranindaki yazilar vektor: posterdeki fontlarin acik lisansli (OFL) eslerinden,
+   yalnizca kullanilan harflerle kesilmis kopyalar. Internet gerekmez.               */
+@font-face{font-family:"CS Cormorant";src:url(assets/fonts/cormorant-700.woff2) format("woff2");font-weight:700;font-display:block}
+@font-face{font-family:"CS Garamond";src:url(assets/fonts/ebgaramond-500.woff2) format("woff2");font-weight:450;font-display:block}
+@font-face{font-family:"CS Inter";src:url(assets/fonts/inter-500.woff2) format("woff2");font-weight:420;font-display:block}
 :root{
   --bg:#032A15;          /* poster zemin rengi - birebir */
   --bg2:#06381e;
