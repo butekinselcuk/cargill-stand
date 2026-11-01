@@ -83,7 +83,8 @@ const DEFAULTS = {
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
   // LED alani: stanttaki LED 768x1536 (dikey); LED islemcisi ekranin sol ustunden okur
   screenMode: 'tam', ledW: 768, ledH: 1536, ledX: 0, ledY: 0,
-  sonVideo: null            // son oynayan videonun boyutu: saat cercevesi videoyla ayni olsun
+  saatAdet: 2,              // kose LED: ekran ikiye bolunur, her yuze bir saat
+  sonVideo: null           // son oynayan videonun boyutu: saat cercevesi videoyla ayni olsun
 };
 const state = { items: [], cfg: Object.assign({}, DEFAULTS) };
 
@@ -103,7 +104,10 @@ const els = {
   wakeNote: $('#wakeNote'), cerceve: $('#cerceve')
 };
 const CFG_KEYS = ['clockSec', 'fadeMs', 'videoFit', 'clockFit', 'order', 'audio', 'secHand', 'beam', 'smooth',
-  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY', 'sonVideo'];
+  'screenMode', 'ledW', 'ledH', 'ledX', 'ledY', 'saatAdet', 'sonVideo'];
+// ikinci saat: ayni sahnenin kopyasi (id'ler 'b_' onekiyle), init'te kurulur
+const els2 = {};
+const saatler = () => els2.cerceve ? [els, els2] : [els];
 const tamSayi = (v, d, en) => { const n = Math.round(+v); return Number.isFinite(n) && n >= en ? n : d; };
 
 function readForm() {
@@ -122,6 +126,7 @@ function readForm() {
   c.ledH = tamSayi($('#ledH').value, DEFAULTS.ledH, 16);
   c.ledX = tamSayi($('#ledX').value, 0, 0);
   c.ledY = tamSayi($('#ledY').value, 0, 0);
+  c.saatAdet = $('#saatAdet').value === '1' ? 1 : 2;
   idbPut('meta', Object.assign({}, c), 'cfg');
   showLedFields();
   applyClockOptions();
@@ -136,6 +141,7 @@ function writeForm() {
   $('#screenMode').value = c.screenMode;
   $('#ledW').value = c.ledW; $('#ledH').value = c.ledH;
   $('#ledX').value = c.ledX; $('#ledY').value = c.ledY;
+  $('#saatAdet').value = String(c.saatAdet);
   showLedFields();
 }
 
@@ -174,7 +180,7 @@ function layoutPlayer() {
 
 /* ------------------------------ Saat cizimi ------------------------------ */
 function applyClockOptions() {
-  setClockOpts(els);
+  saatler().forEach(setClockOpts);
   if (previewEls) setClockOpts(previewEls);
 }
 function setClockOpts(e) {
@@ -202,7 +208,7 @@ function paintClock(e, n) {
 }
 function tickClock() {
   const n = new Date();
-  paintClock(els, n);
+  saatler().forEach(e => paintClock(e, n));
   const t = String(n.getHours()).padStart(2, '0') + ':' + String(n.getMinutes()).padStart(2, '0');
   if (t !== lastMinuteText && els.clockNow) { lastMinuteText = t; els.clockNow.textContent = t; }
 }
@@ -211,7 +217,9 @@ function clockLoop() { tickClock(); rafId = requestAnimationFrame(clockLoop); }
 function startClock() { if (!rafId) clockLoop(); }
 
 /* Sahneyi (poster + ibreler) boyutlandir. Saat, videonun ekranda kapladigi
-   cerceveye oturur: ekran orani ne olursa olsun saat ile video ayni boyda.
+   cerceveye oturur: ekran orani ne olursa olsun saat ile video ayni oranda.
+   Iki saat secildiyse ekran sol/sag ikiye bolunur (kose LED'in iki yuzu) ve
+   her yarida, o yariya sigan video cercevesinde bir saat durur.
    Cerceve icinde: 'Tamami gorunsun' hicbir yeri kesmez, bosluk posterin kenar
    renkleriyle dolar; 'Ekrani doldur' cerceveyi doldurur (yanlardan kirpar).   */
 const AR = POSTER_W / POSTER_H;
@@ -227,16 +235,34 @@ function layoutStage() {
   const host = els.layerClock;
   const LW = host.clientWidth, LH = host.clientHeight;
   if (!LW || !LH) return;
-  const c = videoCercevesi(LW, LH), f = els.cerceve.style;
-  f.left = c.x + 'px'; f.top = c.y + 'px'; f.width = c.w + 'px'; f.height = c.h + 'px';
+  const adet = state.cfg.saatAdet === 1 ? 1 : 2, yW = LW / adet;
+  saatler().forEach((s, i) => {
+    s.cerceve.style.display = i < adet ? '' : 'none';
+    if (i < adet) saatYerlestir(s, videoCercevesi(yW, LH), i * yW);
+  });
+}
+function saatYerlestir(s, c, ox) {
+  const f = s.cerceve.style;
+  f.left = (ox + c.x) + 'px'; f.top = c.y + 'px'; f.width = c.w + 'px'; f.height = c.h + 'px';
   f.right = f.bottom = 'auto';
   const W = c.w, H = c.h;
   const cover = state.cfg.clockFit === 'cover';
   let w = W, h = W / AR;
   if (cover ? (h < H) : (h > H)) { h = H; w = H * AR; }
-  els.stage.style.width = w + 'px';
-  els.stage.style.height = h + 'px';
-  zeminDoldur(els.cerceve, W, H, w, h);
+  s.stage.style.width = w + 'px';
+  s.stage.style.height = h + 'px';
+  zeminDoldur(s.cerceve, W, H, w, h);
+}
+function ikinciSaatKur() {
+  const c = els.cerceve.cloneNode(true);
+  c.querySelectorAll('[id]').forEach(n => { n.id = 'b_' + n.id; });
+  c.id = 'b_cerceve';
+  els.layerClock.appendChild(c);
+  const q = id => c.querySelector('#b_' + id);
+  Object.assign(els2, {
+    cerceve: c, stage: q('stage'), gHour: q('gHour'), gMin: q('gMin'), gSec: q('gSec'),
+    beams: q('beams'), beamMin: q('beamMin'), beamSec: q('beamSec')
+  });
 }
 function videoBoyutuOgren(v) {
   if (!v.videoWidth || !v.videoHeight) return;
@@ -608,6 +634,7 @@ function setupPreview() {
 
 /* ------------------------------- Baslangic ------------------------------- */
 (async function init() {
+  ikinciSaatKur();
   try { await restore(); } catch (e) { console.warn('geri yukleme atlandi', e); renderList(); }
   setupPreview();
   [els.vidA, els.vidB].forEach(v => v.addEventListener('loadedmetadata', () => videoBoyutuOgren(v)));
