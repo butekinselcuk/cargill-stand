@@ -67,14 +67,14 @@
 
         <div class="ledbox" id="resInfo" hidden>
           <div class="ledgrid">
-            <label><span>Kompozisyon genişliği</span><input type="number" id="kompW" min="16" max="16384" step="1" value="5184"></label>
-            <label><span>Kompozisyon yüksekliği</span><input type="number" id="kompH" min="16" max="16384" step="1" value="1536"></label>
+            <label><span>Yakalanan alan genişliği</span><input type="number" id="kompW" min="16" max="16384" step="1" value="3072"></label>
+            <label><span>Yakalanan alan yüksekliği</span><input type="number" id="kompH" min="16" max="16384" step="1" value="1536"></label>
             <label><span>LED yüzü sayısı</span><input type="number" id="yuzSay" min="1" max="12" step="1" value="4"></label>
             <label><span>Yüz genişliği</span><input type="number" id="yuzW" min="16" max="16384" step="1" value="768"></label>
             <label><span>İlk yüz X</span><input type="number" id="yuzX" min="0" max="16384" step="1" value="0"></label>
             <label><span>Yüzler arası boşluk</span><input type="number" id="yuzAra" min="0" max="16384" step="1" value="0"></label>
           </div>
-          <div class="ledinfo">Resolume'da yakalama klibi kompozisyonun tamamını kaplamalı (Clip: Width = kompozisyon genişliği, Height = yüksekliği, Position X/Y = 0). Görüntü bu sığdırmaya göre önceden ayarlanır: LED'de basıklık ve boşluk olmaz. Her yüze bir saat; 768×1536 video her yüzde, 1536×1536 video iki yüze yayılarak oynar. Yüzlerin yerini <b>Hizalama deseni</b> ile kontrol edin.</div>
+          <div class="ledinfo"><b id="resHesap"></b><br>Yakalanan alan, 4 LED yüzünün kapladığı bölgedir (5184'lük kompozisyonun soldaki 3072×1536'sı). Görüntü Resolume'un sığdırmasına göre önceden ayarlanır: LED'de basıklık ve boşluk olmaz. Her yüze bir saat; 768×1536 video her yüzde oynar. Yüzlerin yerini <b>Hizalama deseni</b> ile kontrol edin.</div>
         </div>
 
         <div class="ledbox" id="ledBox" hidden>

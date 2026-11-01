@@ -77,7 +77,7 @@ async function idbDel(store, key) {
 }
 
 /* ------------------------------- Durum ---------------------------------- */
-const CFG_VER = 6;          // varsayilan degisince artir: eski kayitli ayar ezilir
+const CFG_VER = 7;          // varsayilan degisince artir: eski kayitli ayar ezilir
 const DEFAULTS = {
   clockSec: 5, fadeMs: 400, videoFit: 'contain', clockFit: 'contain',
   order: 'seq', audio: false, secHand: true, beam: false, smooth: true,
@@ -87,7 +87,9 @@ const DEFAULTS = {
   // 'resolume': stanttaki Resolume, 1920x1080 yakalamanin TAMAMINI 1536x1536'ya (iki yuz) sigdiriyor.
   // Bu modda 1536x1536 alan ekrana o sikistirmanin tersiyle cizilir -> LED'de oranlar dogru, bosluk yok.
   // v3: Resolume kompozisyonu 5184x1536; icinde 768x1536'lik LED yuzleri (varsayilan 4, X=0'dan bitisik).
-  kompW: 5184, kompH: 1536, yuzSay: 4, yuzW: 768, yuzX: 0, yuzAra: 0,
+  // Yakalanan alan yalniz 4 yuzun kapladigi 3072x1536 bolge: 1920 piksel 5184'e degil 3072'ye
+  // yayilir -> yuz basina 480 piksel (5184'te 284). Resolume klibi bu bolgeyi kaplar.
+  kompW: 3072, kompH: 1536, yuzSay: 4, yuzW: 768, yuzX: 0, yuzAra: 0,
   screenMode: 'resolume', saatZoom: 112, ledW: 768, ledH: 1536, ledX: 0, ledY: 0, yon: 'cw', desen: false,
   // 'oto': video iki ekranlik (1536x1536, kareye yakin) ise iki saat, tek ekranlik (768x1536) ise tek saat
   saatAdet: 'oto',
@@ -169,6 +171,7 @@ function showLedFields() {
   const mod = $('#screenMode').value, yatik = mod === 'yatik', led = mod === 'led' || yatik, res = mod === 'resolume';
   $('#ledBox').hidden = !led;
   $('#resInfo').hidden = !res;
+  if (res) resolumeDegerleri();
   $('#videoFitField').hidden = led || res;
   $('#yonField').hidden = !yatik;
   $('#saatAdetField').hidden = yatik || res;    // yan yatik: tek yuz = tek saat; resolume: her yuze bir saat
@@ -190,6 +193,17 @@ function showLedFields() {
       : 'LED alanı ' + alan + ' sığıyor; video ve saat ölçeklenmeden yerleşir.')
     : 'Alan ' + alan + yer + ' bu ekrana sığmıyor: taşan kısım görünmez. Bilgisayarın çıkış çözünürlüğü en az bu kadar olmalı.');
   if (sigar && Math.abs(dpr - 1) > 0.01) info.textContent += ' Not: Windows ölçeği %' + Math.round(dpr * 100) + '; %100 önerilir.';
+}
+/* Stanttaki Resolume kompozisyonu 5184x1536; klip konumu merkeze goredir. Kurulum ekraninda
+   yakalama klibine girilecek degerler hesaplanip gosterilir (alan kompozisyonun solunda, X=0). */
+const R_KOMP_W = 5184, R_KOMP_H = 1536;
+function resolumeDegerleri() {
+  const W = tamSayi($('#kompW').value, DEFAULTS.kompW, 16), H = tamSayi($('#kompH').value, DEFAULTS.kompH, 16);
+  const yw = tamSayi($('#yuzW').value, DEFAULTS.yuzW, 16), dpr = window.devicePixelRatio || 1;
+  const sw = Math.round(screen.width * dpr), sh = Math.round(screen.height * dpr);
+  $('#resHesap').textContent = 'Resolume yakalama klibi: Width ' + W + ', Height ' + H +
+    ', Position X ' + Math.round(W / 2 - R_KOMP_W / 2) + ', Position Y ' + Math.round(H / 2 - R_KOMP_H / 2) +
+    ', Scale %100. Yüz başına yakalama: ' + Math.round(sw * yw / W) + '×' + sh + ' piksel (LED yüzü ' + yw + '×' + H + ').';
 }
 /* Resolume kompozisyonu ve icindeki LED yuzleri (kompozisyon pikseli) */
 function yuzler() {
@@ -372,7 +386,8 @@ function layoutStage() {
     // saat ekrani videonun ekranda kapladigi alanin AYNISINI kaplar (Resolume o alani LED'e esler)
     // resolume: her LED yuzune bir saat (video oynamamis olsa da)
     if (Y) { saatYerlestir(s, { x: 0, y: 0, w: Y[i].w, h: Y[i].h }, Y[i].x); return; }
-    const f = videoCercevesi(LW, LH);
+    // yan yatik: alan tek LED yuzu, saat yuzun tamamini kaplar (son videonun oranindan bagimsiz)
+    const f = mod === 'yatik' ? { x: 0, y: 0, w: LW, h: LH } : videoCercevesi(LW, LH);
     if (adet === 1) { saatYerlestir(s, f, 0); return; }
     // iki saat: video alani ikiye bolunur, sol yari 1. LED yuzu, sag yari 2. LED yuzu
     saatYerlestir(s, { x: 0, y: f.y, w: f.w / 2, h: f.h }, f.x + i * f.w / 2);

@@ -336,7 +336,8 @@ function layoutStage() {
     if (i >= adet) return;
     // saat ekrani videonun ekranda kapladigi alanin AYNISINI kaplar (Resolume o alani LED'e esler)
     // resolume: alanin tamami iki yuz, her yuze bir saat (video oynamamis olsa da)
-    const f = mod === 'resolume' ? { x: 0, y: 0, w: LW, h: LH } : videoCercevesi(LW, LH);
+    // yan yatik: alan tek LED yuzu, saat yuzun tamamini kaplar (son videonun oranindan bagimsiz)
+    const f = mod === 'resolume' || mod === 'yatik' ? { x: 0, y: 0, w: LW, h: LH } : videoCercevesi(LW, LH);
     if (adet === 1) { saatYerlestir(s, f, 0); return; }
     // iki saat: video alani ikiye bolunur, sol yari 1. LED yuzu, sag yari 2. LED yuzu
     saatYerlestir(s, { x: 0, y: f.y, w: f.w / 2, h: f.h }, f.x + i * f.w / 2);
