@@ -1,7 +1,8 @@
 # Cargill Stand Gösterisi — v4 (Resolume, 4 LED yüzü, yeni saat görseli)
 
 v4 = v3 + yeni saat zemini: düz Deep Green, kadran (halka + 60 çizgi) vektör, yemekler
-orijinal yüksek çözünürlüklü görsellerden (`assets/yemek-*.png`). Kurulum ve Resolume
+orijinal yüksek çözünürlüklü görsellerden (`assets/yemek-*.png`), ikonlar ve logo tasarımcının
+SVG dosyalarından (ikon + yazı birlikte, `assets/ikon-*.svg`). Kurulum ve Resolume
 ayarları v3 ile aynı. Port 8790, ayarlar `cargill-show-v4` adıyla ayrı saklanır.
 
 Stant: **4 LED yüzü, her biri 768×1536**, Resolume kompozisyonu 5184×1536 (yüzler soldaki
